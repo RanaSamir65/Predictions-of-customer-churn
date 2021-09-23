@@ -1,0 +1,191 @@
+#Reading the Cluster6 set
+Cluster6= read.csv("Cluster6.csv")
+Cluster6$Cluster = NULL
+str(Cluster6)
+summary(Cluster6)
+table(Cluster6$Education_Level)
+table(Cluster6$Income_Category)
+
+#Preparing the Cluster6set
+Cluster6$Attrition_Flag = ifelse(Cluster6$Attrition_Flag == "Existing Customer", 0, 1)
+Cluster6$CLIENTNUM = NULL
+Cluster6$Gender = NULL
+Cluster6$Education_Level = ifelse(Cluster6$Education_Level == "Unknown", 1, ifelse(Cluster6$Education_Level == "Uneducated", 2, ifelse(Cluster6$Education_Level == "High School", 3, ifelse(Cluster6$Education_Level == "College", 4, ifelse(Cluster6$Education_Level == "Graduate", 5, ifelse(Cluster6$Education_Level == "Post-Graduate",6,ifelse(Cluster6$Education_Level == "Doctorate",7,8)))))))
+Cluster6$Income_Category = ifelse(Cluster6$Income_Category == "Unknown", 1, ifelse(Cluster6$Income_Category == "Less than $40K", 2, ifelse(Cluster6$Income_Category == "$40K - $60K", 3, ifelse(Cluster6$Income_Category == "$60K - $80K", 4, ifelse(Cluster6$Income_Category == "$80K - $120K", 5, ifelse(Cluster6$Income_Category == "$120K +",6,7))))))
+Marital_Status = unique(Cluster6$Marital_Status)
+Marital_Status
+Cluster6$Marital_Status = NULL
+Card_Category = unique(Cluster6$Card_Category)
+Card_Category
+for (c in Card_Category){
+  assign(paste(c), ifelse(Cluster6$Card_Category == c,1,0))
+}
+Cluster6$Blue = Blue
+Cluster6$Gold = Gold
+Cluster6$Card_Category = NULL
+#splitting the Cluster6 set into training and testing set
+library(caTools)
+set.seed(144)
+spl = sample.split(Cluster6$Attrition_Flag, SplitRatio=0.7)
+TrainCluster6 = subset(Cluster6, spl==TRUE)
+TestCluster6 = subset(Cluster6, spl==FALSE)
+
+#Baseline accuracy
+
+table(TestCluster6$Attrition_Flag)
+acc = 539 / 621
+acc
+#0.8679549
+
+#Using Logistic Regression model
+LogReg = glm(Attrition_Flag~. ,  data = TrainCluster6, family = binomial)
+summary(LogReg)
+
+#Remove insignificant variables
+Regression_Data = TrainCluster6
+Regression_Data$Blue = NULL
+LogReg = glm(Attrition_Flag~. ,  data = Regression_Data, family = binomial)
+summary(LogReg)
+
+Regression_Data$Gold = NULL
+LogReg = glm(Attrition_Flag~. ,  data = Regression_Data, family = binomial)
+summary(LogReg)
+
+Regression_Data$Customer_Age = NULL
+LogReg = glm(Attrition_Flag~. ,  data = Regression_Data, family = binomial)
+summary(LogReg)
+
+Regression_Data$Education_Level = NULL
+LogReg = glm(Attrition_Flag~. ,  data = Regression_Data, family = binomial)
+summary(LogReg)
+
+Regression_Data$Avg_Open_To_Buy = NULL
+LogReg = glm(Attrition_Flag~. ,  data = Regression_Data, family = binomial)
+summary(LogReg)
+
+#prediction using logistic regression model
+PredLogReg = predict(LogReg, newdata= TestCluster6, type = "response")
+
+library(ROCR)
+ROCRpred = prediction(PredLogReg, TestCluster6$Attrition_Flag)
+ROCRperf = performance(ROCRpred,"tpr","fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1),text.adj=c(-0.5,0.5))
+
+#Try Threshold 0.10
+table(TestCluster6$Attrition_Flag, PredLogReg>0.10)
+AccuracyLog = ( 69 + 404) / 621
+AccuracyLog
+#0.7616747
+
+#Try Threshold 0.20 
+table(TestCluster6$Attrition_Flag, PredLogReg>0.20)
+AccuracyLog = ( 60 + 470) / 621
+AccuracyLog
+#0.8534622
+
+#Try Threshold 0.3
+table(TestCluster6$Attrition_Flag, PredLogReg>0.3)
+AccuracyLog = ( 52 + 507) / 621
+AccuracyLog
+#0.900161
+sensitivity = 52 / 82
+sensitivity
+specificity = 507 / 539
+specificity
+
+#Using CART model
+library(rpart)
+library(rpart.plot)
+#determine the cp to be used
+library(caret)
+set.seed(2)
+Cpcontrol = trainControl( method = "cv", number = 10 )
+Grid = data.frame(.cp = seq(0,0.092,0.001))
+cartCV = train(Attrition_Flag~. , data = TrainCluster6, method = "rpart", trControl = Cpcontrol, tuneGrid = Grid )
+cartCV
+plot(cartCV)
+#best cp is 0.016
+
+CART = rpart(Attrition_Flag~., data = TrainCluster6, method = "class", cp = 0.016)
+prp(CART)
+PredCART = predict(CART, newdata= TestCluster6)
+PredCART
+pred.prob = PredCART[,2]
+
+
+ROCRpred = prediction(pred.prob, TestCluster6$Attrition_Flag)
+ROCRperf = performance(ROCRpred,"tpr","fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1),text.adj=c(-0.5,0.5))
+
+#Try Threshold 0.2 
+table(TestCluster6$Attrition_Flag, pred.prob > 0.2)
+AccuracyCART = (48 + 518) / 621
+AccuracyCART
+# 0.9114332
+
+#Try Threshold 0.3 
+table(TestCluster6$Attrition_Flag, pred.prob > 0.3)
+AccuracyCART = (48 + 518) / 621
+AccuracyCART
+# 0.9114332
+
+#Try Threshold 0.4 (Best)
+table(TestCluster6$Attrition_Flag, pred.prob > 0.4)
+AccuracyCART = (48 + 518) / 621
+AccuracyCART
+# 0.9114332
+sensitivity = 48 / 82
+sensitivity
+specificity = 518 / 539
+specificity
+
+
+table(TestCluster6$Attrition_Flag, pred.prob > 0.5)
+AccuracyCART = (48 + 518) / 621
+AccuracyCART
+# 0.9114332
+
+#Use random forest model
+library(randomForest)
+set.seed(1)
+RanFor = randomForest(Attrition_Flag ~ . , data = TrainCluster6, importance= TRUE)
+RanFor
+# error =  0.04864557
+plot(RanFor, type = "simple")
+
+varImpPlot(RanFor, sort=TRUE, n.var=15)
+
+PredRanFor = predict(RanFor, newdata=TestCluster6)
+
+
+ROCRpred = prediction(PredRanFor, TestCluster6$Attrition_Flag)
+ROCRperf = performance(ROCRpred,"tpr","fpr")
+plot(ROCRperf, colorize=TRUE, print.cutoffs.at=seq(0,1,by=0.1),text.adj=c(-0.5,0.5))
+
+#Try Threshold 0.2
+table(TestCluster6$Attrition_Flag, PredRanFor > 0.2)
+Accuracy = (75 + 497) / 621
+Accuracy
+#0.921095
+
+#Try Threshold 0.3 
+table(TestCluster6$Attrition_Flag, PredRanFor > 0.3)
+Accuracy = (67 + 516) / 621
+Accuracy
+#0.9388084
+
+#Try Threshold 0.35
+table(TestCluster6$Attrition_Flag, PredRanFor > 0.35)
+Accuracy = (63 + 522) / 621
+Accuracy
+# 0.942029
+
+#Try Threshold 0.40  (Best)
+table(TestCluster6$Attrition_Flag, PredRanFor > 0.4)
+Accuracy = (59 + 527) / 621
+Accuracy
+#  0.9436393
+sensitivity = 59 / 82
+sensitivity
+specificity = 527 / 539
+specificity

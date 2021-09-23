@@ -1,0 +1,193 @@
+# Read Data
+Bank_Customers = read.csv("BankChurners.csv")
+str(Bank_Customers)
+summary(Bank_Customers)
+Bank_Customers$Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_1 = NULL
+Bank_Customers$Naive_Bayes_Classifier_Attrition_Flag_Card_Category_Contacts_Count_12_mon_Dependent_count_Education_Level_Months_Inactive_12_mon_2 = NULL
+Customers = Bank_Customers
+
+# Data Preparation
+Bank_Customers$CLIENTNUM = NULL
+Bank_Customers$Attrition_Flag = ifelse(Bank_Customers$Attrition_Flag == "Existing Customer", 1, 0)
+Bank_Customers$Gender = ifelse(Bank_Customers$Gender == "F", 1, 0)
+Bank_Customers$Education_Level = ifelse(Bank_Customers$Education_Level == "Unknown", 1, ifelse(Bank_Customers$Education_Level == "Uneducated", 2, ifelse(Bank_Customers$Education_Level == "High School", 3, ifelse(Bank_Customers$Education_Level == "College", 4, ifelse(Bank_Customers$Education_Level == "Graduate", 5, ifelse(Bank_Customers$Education_Level == "Post-Graduate",6,ifelse(Bank_Customers$Education_Level == "Doctorate",7,8)))))))
+Bank_Customers$Income_Category = ifelse(Bank_Customers$Income_Category == "Unknown", 1, ifelse(Bank_Customers$Income_Category == "Less than $40K", 2, ifelse(Bank_Customers$Income_Category == "$40K - $60K", 3, ifelse(Bank_Customers$Income_Category == "$60K - $80K", 4, ifelse(Bank_Customers$Income_Category == "$80K - $120K", 5, ifelse(Bank_Customers$Income_Category == "$120K +",6,7))))))
+Marital_Status = unique(Bank_Customers$Marital_Status)
+Marital_Status
+for (a in Marital_Status){
+  assign(paste(a), ifelse(Bank_Customers$Marital_Status == a,1,0))
+}
+Bank_Customers$Married = Married
+Bank_Customers$Single = Single
+Bank_Customers$Marital_Status_Unknown = Unknown
+Bank_Customers$Divorced = Divorced
+Bank_Customers$Marital_Status = NULL
+Card_Category = unique(Bank_Customers$Card_Category)
+Card_Category
+for (c in Card_Category){
+  assign(paste(c), ifelse(Bank_Customers$Card_Category == c,1,0))
+}
+Bank_Customers$Blue = Blue
+Bank_Customers$Gold = Gold
+Bank_Customers$Silver = Silver
+Bank_Customers$Platinum = Platinum
+Bank_Customers$Card_Category = NULL
+
+#Data Normalization
+
+normalize <- function(x) {return ((x - min(x)) / (max(x) - min(x)))}
+Bank_Customers$Customer_Age = normalize(Bank_Customers$Customer_Age)
+Bank_Customers$Dependent_count = normalize(Bank_Customers$Dependent_count)
+Bank_Customers$Education_Level = normalize(Bank_Customers$Education_Level)
+Bank_Customers$Income_Category = normalize(Bank_Customers$Income_Category)
+Bank_Customers$Months_on_book = normalize(Bank_Customers$Months_on_book)
+Bank_Customers$Total_Relationship_Count = normalize(Bank_Customers$Total_Relationship_Count)
+Bank_Customers$Months_Inactive_12_mon = normalize(Bank_Customers$Months_Inactive_12_mon)
+Bank_Customers$Contacts_Count_12_mon = normalize(Bank_Customers$Contacts_Count_12_mon)
+Bank_Customers$Credit_Limit = normalize(Bank_Customers$Credit_Limit)
+Bank_Customers$Total_Revolving_Bal = normalize(Bank_Customers$Total_Revolving_Bal)
+Bank_Customers$Avg_Open_To_Buy = normalize(Bank_Customers$Avg_Open_To_Buy)
+Bank_Customers$Total_Amt_Chng_Q4_Q1 = normalize(Bank_Customers$Total_Amt_Chng_Q4_Q1)
+Bank_Customers$Total_Trans_Amt = normalize(Bank_Customers$Total_Trans_Amt)
+Bank_Customers$Total_Trans_Ct = normalize(Bank_Customers$Total_Trans_Ct)
+Bank_Customers$Total_Ct_Chng_Q4_Q1 = normalize(Bank_Customers$Total_Ct_Chng_Q4_Q1)
+Bank_Customers$Avg_Utilization_Ratio = normalize(Bank_Customers$Avg_Utilization_Ratio)
+
+#K-means clustering with attrition flag included
+set.seed(1)
+for (k in 1:21){
+  assign(paste("KMC",k), kmeans(Bank_Customers, centers = k, iter.max = 10000))
+}
+
+
+# plot
+Num_of_Clusters = seq(1,21,1)
+Total_Withiniss = c(`KMC 1`$tot.withinss, `KMC 2`$tot.withinss, `KMC 3`$tot.withinss, 
+                    `KMC 4`$tot.withinss, `KMC 5`$tot.withinss, `KMC 6`$tot.withinss, 
+                    `KMC 7`$tot.withinss, `KMC 8`$tot.withinss, `KMC 9`$tot.withinss, 
+                    `KMC 10`$tot.withinss, `KMC 11`$tot.withinss, `KMC 12`$tot.withinss,
+                    `KMC 13`$tot.withinss, `KMC 14`$tot.withinss, `KMC 15`$tot.withinss,
+                    `KMC 16`$tot.withinss, `KMC 17`$tot.withinss, `KMC 18`$tot.withinss,
+                    `KMC 19`$tot.withinss, `KMC 20`$tot.withinss, `KMC 21`$tot.withinss)
+plot(Num_of_Clusters, Total_Withiniss, type="b")
+
+# FRom the graph, 8 clusters are enough to study the bank customers
+str(`KMC 8`)
+Cluster_Size = `KMC 8`$size/10127 * 100
+Cluster_Size
+Customers$Cluster = as.factor(`KMC 8`$cluster )
+
+for (r in 1:8){
+  assign(paste("Cluster", r), subset(Customers, Customers$Cluster == r))
+}
+
+#Sava Clusters as csv files
+write.csv(`Cluster 1`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster1.csv", row.names = FALSE)
+write.csv(`Cluster 2`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster2.csv", row.names = FALSE)
+write.csv(`Cluster 3`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster3.csv", row.names = FALSE)
+write.csv(`Cluster 4`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster4.csv", row.names = FALSE)
+write.csv(`Cluster 5`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster5.csv", row.names = FALSE)
+write.csv(`Cluster 6`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster6.csv", row.names = FALSE)
+write.csv(`Cluster 7`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster7.csv", row.names = FALSE)
+write.csv(`Cluster 8`,"D:/Ejust/Seventh Semester/Advanced Statistical Methods/Project/Dataset\\Cluster8.csv", row.names = FALSE)
+
+#Attrition Flag
+table(Customers$Attrition_Flag, Customers$Cluster)
+
+Attrition_Flag = tapply(Bank_Customers$Attrition_Flag, Customers$Cluster, mean)
+Attrition_Flag = as.data.frame(as.table(Attrition_Flag))
+colnames(Attrition_Flag)[1] = "Cluster"
+str(Attrition_Flag)
+library(ggplot2)
+ggplot(Attrition_Flag, aes(x=Cluster, y= Freq, fill= Cluster)) + geom_bar(alpha= 0.4, stat = "identity")+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")+
+  geom_text(aes(label=round(Freq*100,0)), vjust=1.6, color="black", size=3.5)
+
+#Customer Age
+tapply(Customers$Customer_Age, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Customer_Age, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Gender
+table(Customers$Gender, Customers$Cluster)
+ggplot(Customers, aes(x=Cluster, fill= Gender)) + geom_bar(alpha= 0.4, position = "dodge")+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")
+
+#Dependent_Count
+tapply(Customers$Dependent_count, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Dependent_count, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Education_Level
+table(Customers$Education_Level, Customers$Cluster)
+ggplot(Customers, aes(x=Cluster, fill= Education_Level)) + geom_bar(alpha= 0.6)+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")
+
+#Marital_Status
+table(Customers$Marital_Status, Customers$Cluster)
+ggplot(Customers, aes(x=Cluster, fill= Marital_Status)) + geom_bar(alpha= 0.6)+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")
+
+#Income_Category
+table(Customers$Income_Category, Customers$Cluster)
+ggplot(Customers, aes(x=Cluster, fill= Income_Category)) + geom_bar(alpha= 0.6)+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")
+
+#Card Category
+table(Customers$Card_Category, Customers$Cluster)
+ggplot(Customers, aes(x=Cluster, fill= Card_Category)) + geom_bar(alpha= 0.6)+
+  labs(title="Mean Total Relationship Count Per Cluster", x="Cluster",y="Mean Total Relationship COunt")
+
+#Months_on_Book
+
+tapply(Customers$Months_on_book, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Months_on_book, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total_Relationship_Count
+
+tapply(Customers$Total_Relationship_Count, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Total_Relationship_Count, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Months_Inactive_12_mon
+
+tapply(Customers$Months_Inactive_12_mon, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Months_Inactive_12_mon, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Contacts_Count_12_mon
+tapply(Customers$Contacts_Count_12_mon, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Contacts_Count_12_mon, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Credit Limit
+tapply(Customers$Credit_Limit, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Credit_Limit, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total Revolving Balance
+tapply(Customers$Total_Revolving_Bal, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Credit_Limit, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Avg-Open_to_Buy
+tapply(Customers$Avg_Open_To_Buy, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Avg_Open_To_Buy, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total_Amt_Chng_Q4_Q1
+tapply(Customers$Total_Amt_Chng_Q4_Q1, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Total_Amt_Chng_Q4_Q1, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total_Trans_Amt
+tapply(Customers$Total_Trans_Amt, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Total_Trans_Amt, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total_Trans_ct
+tapply(Customers$Total_Trans_Ct, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Total_Trans_Ct, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Total_Ct_Chng_Q4_Q1
+tapply(Customers$Total_Ct_Chng_Q4_Q1, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Total_Ct_Chng_Q4_Q1, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+#Avg_Utilization_Ratio
+tapply(Customers$Avg_Utilization_Ratio, Customers$Cluster, mean)
+ggplot(Customers, aes(x=Cluster, y=Avg_Utilization_Ratio, color = Cluster)) +  geom_boxplot(alpha=0.4, outlier.colour="red", outlier.shape=8, outlier.size=1) + stat_summary(fun=mean, geom="point", shape=20, size=4)
+
+###################################################
+#Scatter plots
+
+ggplot(Customers, aes(x = Card_Category, y = Avg_Utilization_Ratio, color = Cluster)) + geom_point(size = 3, shape = 16)
